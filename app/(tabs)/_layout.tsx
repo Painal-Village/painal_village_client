@@ -70,6 +70,7 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+// Made changes here 
 
 const styles = StyleSheet.create({
   iconWrap: {

@@ -1169,19 +1169,4 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
-borderRadius: 14,
-  paddingVertical: 16,
-    alignItems: "center",
-      marginTop: 10,
-        shadowColor: Colors.primaryDark,
-          shadowOffset: { width: 0, height: 4 },
-shadowOpacity: 0.2,
-  shadowRadius: 8,
-    elevation: 4,
-  },
-saveBtnText: {
-  color: Colors.white,
-    fontSize: 16,
-      fontWeight: "700",
-  },
-});
+
