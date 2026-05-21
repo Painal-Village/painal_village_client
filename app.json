@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "Painal",
+    "slug": "painal_village",
+    "version": "5.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logo/painal_logo_new.png",
+    "scheme": "painalvillage",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.mohitxcodes.painal",
+      "versionCode": 12,
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff",
+        "foregroundImage": "./assets/logo/painal_logo_new.png",
+        "monochromeImage": "./assets/logo/painal_logo_new.png",
+        "backgroundImage": "./assets/logo/painal_logo_new.png"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff",
+          "dark": {
+            "backgroundColor": "#000000"
+          }
+        }
+      ],
+      "expo-font",
+      "expo-web-browser"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "16e0aae1-284f-4084-8604-78514973aebe"
+      }
+    }
+  }
+}
