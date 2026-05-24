@@ -173,7 +173,7 @@ export default function HomeScreen() {
             </View>
             <Text style={styles.introTitle}>Welcome to Painal Village</Text>
             <HindiLabel style={styles.introHindiTitle}>
-              पाइनल ग्राम में आपका स्वागत है
+              पैनाल ग्राम में आपका स्वागत है
             </HindiLabel>
             <Text style={styles.introDesc}>
               Discover our roots, explore our rich heritage, and stay connected

@@ -9,10 +9,11 @@ import {
   TextInput,
   ScrollView,
 } from "react-native";
-import { Image } from "expo-image";
+import Avatar from "../../components/common/Avatar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { toTitleCase } from "../../utils/stringFormat";
 import { Colors } from "../../constants/colors";
 import { HindiLabel } from "../../components/common/HindiLabel";
 import { useFamily } from "../../hooks/useFamily";
@@ -92,10 +93,6 @@ export default function FamilyDetailScreen() {
   }
 
   const renderDbMember = ({ item }: { item: any }) => {
-    const avatarUrl =
-      item.profilePhoto ||
-      `https://api.dicebear.com/7.x/thumbs/png?seed=${item.id}&backgroundColor=dbeafe&size=120`;
-
     return (
       <TouchableOpacity
         style={styles.memberCard}
@@ -108,18 +105,16 @@ export default function FamilyDetailScreen() {
         <View style={styles.cardContent}>
           <View style={styles.topRow}>
             <View style={styles.avatarContainer}>
-              <Image
-                source={{ uri: avatarUrl }}
+              <Avatar
+                url={item.profilePhoto}
+                fallbackSeed={item.id}
                 style={styles.avatar}
                 accessibilityLabel={`Avatar for ${item.name}`}
-                cachePolicy="disk"
-                transition={200}
-                contentFit="cover"
               />
             </View>
             <View style={styles.memberInfo}>
               <View style={styles.nameRoleRow}>
-                <Text style={styles.nameEn}>{item.name}</Text>
+                <Text style={styles.nameEn}>{toTitleCase(item.name)}</Text>
               </View>
               <HindiLabel style={styles.nameHi}>{item.hindiName}</HindiLabel>
               <View style={styles.metaRow}>
@@ -148,7 +143,6 @@ export default function FamilyDetailScreen() {
   };
 
   const renderMockMember = ({ item }: { item: any }) => {
-    const avatarUrl = `https://api.dicebear.com/7.x/thumbs/png?seed=${item.avatarSeed}&backgroundColor=${item.gender === "Female" ? "fce4ec" : "dbeafe"}&size=120`;
     const roleStyle = ROLE_COLORS[item.role] || {
       bg: "rgba(232, 168, 56, 0.1)",
       text: Colors.primary,
@@ -162,13 +156,11 @@ export default function FamilyDetailScreen() {
         <View style={styles.cardContent}>
           <View style={styles.topRow}>
             <View style={styles.avatarContainer}>
-              <Image
-                source={{ uri: avatarUrl }}
+              <Avatar
+                url={item.profilePhoto}
+                fallbackSeed={item.id || item.avatarSeed}
                 style={styles.avatar}
                 accessibilityLabel={`Avatar for ${item.name}`}
-                cachePolicy="disk"
-                transition={200}
-                contentFit="cover"
               />
               {item.role === "Head" && (
                 <View style={styles.starBadge}>
@@ -178,7 +170,7 @@ export default function FamilyDetailScreen() {
             </View>
             <View style={styles.memberInfo}>
               <View style={styles.nameRoleRow}>
-                <Text style={styles.nameEn}>{item.name}</Text>
+                <Text style={styles.nameEn}>{toTitleCase(item.name)}</Text>
                 <View
                   style={[styles.rolePill, { backgroundColor: roleStyle.bg }]}
                 >
@@ -399,24 +391,19 @@ export default function FamilyDetailScreen() {
                 contentContainerStyle={styles.recentScroll}
               >
                 {recentProfiles.map((profile) => {
-                  const avatarUrl =
-                    profile.profilePhoto ||
-                    `https://api.dicebear.com/7.x/thumbs/png?seed=${profile.id}&backgroundColor=dbeafe&size=100`;
                   return (
                     <TouchableOpacity
                       key={profile.id}
                       style={styles.recentCard}
                       onPress={() => router.push(`/member/${profile.id}`)}
                     >
-                      <Image
-                        source={{ uri: avatarUrl }}
+                      <Avatar
+                        url={profile.profilePhoto}
+                        fallbackSeed={profile.id}
                         style={styles.recentAvatar}
-                        cachePolicy="disk"
-                        transition={200}
-                        contentFit="cover"
                       />
                       <Text style={styles.recentName} numberOfLines={1}>
-                        {profile.name}
+                        {toTitleCase(profile.name)}
                       </Text>
                       <HindiLabel
                         style={styles.recentHindiName}

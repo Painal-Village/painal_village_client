@@ -2,7 +2,7 @@ export const Strings = {
   hi: {
     appTitle: "Painal",
     appSubtitle: "अपना गाँव, अपनी पहचान",
-    villageName: "पाइनल ग्राम",
+    villageName: "पैनाल ग्राम",
     villageSub: "Painal Village, Dist. Patna",
     population: "जनसंख्या",
     houses: "मकान",

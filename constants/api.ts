@@ -16,8 +16,8 @@ export const API_ENDPOINTS = {
     `${API_BASE_URL}/primary-families/${id}/children`,
   primaryFamilySiblings: (id: number) =>
     `${API_BASE_URL}/primary-families/${id}/siblings`,
-  primaryFamilyAvatar: (id: number) =>
-    `${API_BASE_URL}/primary-families/members/${id}/avatar`,
+  primaryFamilyAvatar: (id: number, version?: string) =>
+    version ? `${API_BASE_URL}/members/${id}.webp?v=${version}` : `${API_BASE_URL}/primary-families/members/${id}/avatar`,
   primaryFamilyDetails: (id: number) =>
     `${API_BASE_URL}/primary-families/members/${id}/details`,
   addPrimaryFamilyChild: (id: number) =>
@@ -25,4 +25,8 @@ export const API_ENDPOINTS = {
   deletePrimaryFamilyMember: (id: number) =>
     `${API_BASE_URL}/primary-families/members/${id}`,
   authLogin: `${API_BASE_URL}/auth/login`,
+  dataVersion: `${API_BASE_URL}/data-version`,
+  membersJson: `${API_BASE_URL}/data/members.json`,
+  reportMemberDetails: `${API_BASE_URL}/members/reports`,
+  requestAddChild: `${API_BASE_URL}/members/requests/child`,
 };

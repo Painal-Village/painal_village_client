@@ -3,7 +3,7 @@ import { Asset } from "expo-asset";
 import * as FileSystem from "expo-file-system/legacy";
 import { Stack, useRouter } from "expo-router";
 import * as Sharing from "expo-sharing";
-import { ExpoPDFViewer } from "pdf-viewer-expo";
+import { FullPDFViewer } from "../components/common/FullPDFViewer";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -155,7 +155,7 @@ export default function VillageBookScreen() {
               <Text style={styles.coverTitle}>Painal Village</Text>
               <Text style={styles.coverSubtitle}>Official Book</Text>
               <View style={styles.coverDivider} />
-              <HindiLabel style={styles.coverHindi}>पाइनल ग्राम</HindiLabel>
+              <HindiLabel style={styles.coverHindi}>पैनाल ग्राम</HindiLabel>
             </View>
           </View>
         </View>
@@ -233,7 +233,7 @@ export default function VillageBookScreen() {
           </View>
 
           <View style={styles.pdfContainer}>
-            {pdfUri && <ExpoPDFViewer uri={pdfUri} />}
+            {pdfUri && <FullPDFViewer uri={pdfUri} />}
           </View>
         </SafeAreaView>
       </Modal>

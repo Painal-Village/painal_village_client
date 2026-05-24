@@ -14,7 +14,7 @@ export const currentLeaders: PoliticalLeader[] = [
     position: "मुखिया",
     imageUrl: "",
     place: "Painal",
-    hindiPlace: "पाइनल",
+    hindiPlace: "पैनाल",
   },
   {
     name: "बाबिता कुमारी",
@@ -23,7 +23,7 @@ export const currentLeaders: PoliticalLeader[] = [
     imageUrl:
       "https://pxytwvgrvlaycdnljjht.supabase.co/storage/v1/object/public/painal_village/leaders/1779340706619.webp",
     place: "Painal",
-    hindiPlace: "पाइनल",
+    hindiPlace: "पैनाल",
   },
   {
     name: "दीपू कुमार",
@@ -32,7 +32,7 @@ export const currentLeaders: PoliticalLeader[] = [
     imageUrl:
       "https://pxytwvgrvlaycdnljjht.supabase.co/storage/v1/object/public/painal_village/leaders/1779340801879.webp",
     place: "Painal",
-    hindiPlace: "पाइनल",
+    hindiPlace: "पैनाल",
   },
   {
     name: "रेशमी देवी",
@@ -41,7 +41,7 @@ export const currentLeaders: PoliticalLeader[] = [
     imageUrl:
       "https://pxytwvgrvlaycdnljjht.supabase.co/storage/v1/object/public/painal_village/leaders/1779340790712.webp",
     place: "Painal",
-    hindiPlace: "पाइनल",
+    hindiPlace: "पैनाल",
   },
 ];
 

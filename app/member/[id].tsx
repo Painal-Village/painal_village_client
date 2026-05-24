@@ -12,8 +12,10 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  DeviceEventEmitter,
 } from "react-native";
 import { Image } from "expo-image";
+import Avatar from "../../components/common/Avatar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,6 +25,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useMemberDetail } from "../../hooks/useMemberDetail";
 import { PrimaryFamilyDTO } from "../../types/family";
 import { formatBirthDate } from "../../utils/dateFormat";
+import { toTitleCase } from "../../utils/stringFormat";
 import { useRecentProfiles } from "../../hooks/useRecentProfiles";
 import MemberDetailSkeleton from "../../components/skeletons/MemberDetailSkeleton";
 import * as ImagePicker from "expo-image-picker";
@@ -67,6 +70,20 @@ export default function MemberDetailScreen() {
 
   // Delete State
   const [isDeletingMember, setIsDeletingMember] = React.useState(false);
+
+  // Action Sheet & Report State
+  const [isActionSheetVisible, setIsActionSheetVisible] = React.useState(false);
+  const [isReportModalVisible, setIsReportModalVisible] = React.useState(false);
+
+  // Report Form State
+  const [reportEnglishName, setReportEnglishName] = React.useState(false);
+  const [correctEnglishName, setCorrectEnglishName] = React.useState("");
+  const [reportHindiName, setReportHindiName] = React.useState(false);
+  const [correctHindiName, setCorrectHindiName] = React.useState("");
+  const [reportDob, setReportDob] = React.useState(false);
+  const [correctDob, setCorrectDob] = React.useState("");
+  const [reportProfilePhoto, setReportProfilePhoto] = React.useState(false);
+  const [isSubmittingReport, setIsSubmittingReport] = React.useState(false);
 
   React.useEffect(() => {
     if (member) {
@@ -173,24 +190,26 @@ export default function MemberDetailScreen() {
         }
 
         // Save path to PostgreSQL via Spring Boot
-        const apiResponse = await fetch(
-          API_ENDPOINTS.primaryFamilyAvatar(memberId),
-          {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ avatarPath: fileName }),
-          },
-        );
+        // const apiResponse = await fetch(
+        //   API_ENDPOINTS.primaryFamilyAvatar(memberId),
+        //   {
+        //     method: "PATCH",
+        //     headers: { "Content-Type": "application/json" },
+        //     body: JSON.stringify({ avatarPath: fileName }),
+        //   },
+        // );
 
-        if (!apiResponse.ok) {
-          throw new Error("Failed to save avatar path to database");
-        }
+        // if (!apiResponse.ok) {
+        //   throw new Error("Failed to save avatar path to database");
+        // }
 
-        // Optimistic UI update with cache buster to force image reload
-        const { data: urlData } = supabase.storage
-          .from("painal_village")
-          .getPublicUrl(fileName);
-        setLocalAvatar(`${urlData.publicUrl}?t=${Date.now()}`);
+        // Clear the image cache
+        await Image.clearMemoryCache();
+        await Image.clearDiskCache();
+
+        // Emit global event to trigger all Avatar components to bust their URL caches
+        DeviceEventEmitter.emit('avatarUpdated', memberId);
+
         Alert.alert("Success", "Avatar updated successfully!");
       }
     } catch (err: any) {
@@ -202,6 +221,8 @@ export default function MemberDetailScreen() {
   };
 
   const handleSaveDetails = async () => {
+    Alert.alert("Static Data", "Cannot save details in static mode.");
+    /*
     if (!editName.trim() || !editHindiName.trim()) {
       Alert.alert("Validation Error", "Name and Hindi Name are required.");
       return;
@@ -235,50 +256,48 @@ export default function MemberDetailScreen() {
     } finally {
       setIsSavingDetails(false);
     }
+    */
   };
 
   const handleAddChild = async () => {
-    if (!newChildName.trim() || !newChildHindiName.trim()) {
-      Alert.alert("Validation Error", "Name and Hindi Name are required.");
+    if (!newChildName.trim() || !newChildBirthYear.trim()) {
+      Alert.alert("Validation Error", "Name and Date of Birth are required.");
       return;
     }
 
     try {
       setIsAddingChild(true);
-      const apiResponse = await fetch(
-        API_ENDPOINTS.addPrimaryFamilyChild(memberId),
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: newChildName.trim(),
-            hindiName: newChildHindiName.trim(),
-            birthYear: newChildBirthYear.trim(),
-          }),
-        },
-      );
+      const apiResponse = await fetch(API_ENDPOINTS.requestAddChild, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          memberId,
+          childName: newChildName.trim(),
+          childDob: newChildBirthYear.trim(),
+        }),
+      });
 
       if (!apiResponse.ok) {
-        throw new Error("Failed to add child member");
+        throw new Error("Failed to submit request");
       }
 
       setIsAddChildModalVisible(false);
       // Reset form
       setNewChildName("");
-      setNewChildHindiName("");
       setNewChildBirthYear("");
 
-      await refetch();
-      Alert.alert("Success", "Child added successfully!");
+      Alert.alert("Success", "Child request submitted successfully!");
     } catch (err: any) {
       console.error(err);
-      Alert.alert("Error", err.message || "Failed to add child");
+      Alert.alert("Error", err.message || "Failed to submit request");
     } finally {
       setIsAddingChild(false);
     }
   };
 
   const handleDeleteMember = async () => {
+    Alert.alert("Static Data", "Cannot delete member in static mode.");
+    /*
     // 1. Fast-fail validation: Do not allow deletion if the member has children.
     if (children && children.length > 0) {
       Alert.alert(
@@ -320,6 +339,56 @@ export default function MemberDetailScreen() {
         },
       ]
     );
+    */
+  };
+
+  const handleSubmitReport = async () => {
+    if (!reportEnglishName && !reportHindiName && !reportDob && !reportProfilePhoto) {
+      Alert.alert("Error", "Please select at least one incorrect detail to report.");
+      return;
+    }
+
+    try {
+      setIsSubmittingReport(true);
+      const payload = {
+        memberId,
+        incorrectEnglishName: reportEnglishName,
+        correctEnglishName: reportEnglishName ? correctEnglishName.trim() : null,
+        incorrectHindiName: reportHindiName,
+        correctHindiName: reportHindiName ? correctHindiName.trim() : null,
+        incorrectDob: reportDob,
+        correctDob: reportDob ? correctDob.trim() : null,
+        incorrectProfilePhoto: reportProfilePhoto,
+      };
+
+      const apiResponse = await fetch(API_ENDPOINTS.reportMemberDetails, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!apiResponse.ok) {
+        throw new Error("Failed to submit report");
+      }
+
+      Alert.alert("Success", "Your report has been submitted successfully!");
+      setIsReportModalVisible(false);
+
+      // Reset form
+      setReportEnglishName(false);
+      setCorrectEnglishName("");
+      setReportHindiName(false);
+      setCorrectHindiName("");
+      setReportDob(false);
+      setCorrectDob("");
+      setReportProfilePhoto(false);
+
+    } catch (err: any) {
+      console.error(err);
+      Alert.alert("Error", err.message || "Failed to submit report");
+    } finally {
+      setIsSubmittingReport(false);
+    }
   };
 
   const renderRelationCard = (
@@ -327,10 +396,6 @@ export default function MemberDetailScreen() {
     relation: string,
     hindiRelation: string,
   ) => {
-    const personAvatar =
-      person.profilePhoto ||
-      `https://api.dicebear.com/7.x/thumbs/png?seed=${person.id}&backgroundColor=dbeafe&size=120`;
-
     return (
       <TouchableOpacity
         key={person.id}
@@ -338,14 +403,16 @@ export default function MemberDetailScreen() {
         onPress={() => navigateToMember(person.id)}
         activeOpacity={0.7}
       >
-        <Image source={{ uri: personAvatar }} style={styles.relationAvatar} cachePolicy="disk" transition={200} contentFit="cover" />
+        <Avatar url={person.profilePhoto} fallbackSeed={person.id} style={styles.relationAvatar} />
         <View style={styles.relationInfo}>
+
           <Text style={styles.relationName} numberOfLines={1}>
             {person.name}
           </Text>
           <HindiLabel style={styles.relationHindiName} numberOfLines={1}>
             {person.hindiName}
           </HindiLabel>
+
         </View>
         <View style={styles.relationBadge}>
           <Text style={styles.relationBadgeText}>{relation}</Text>
@@ -360,62 +427,46 @@ export default function MemberDetailScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Header with avatar */}
+      <View style={styles.headerWrap}>
+        <SafeAreaView edges={["top"]} style={styles.headerSafe}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backBtn}
+          >
+            <Ionicons name="arrow-back" size={22} color={Colors.white} />
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Member Details</Text>
+            <HindiLabel style={styles.headerHindi}>सदस्य विवरण</HindiLabel>
+          </View>
+          <View style={styles.headerRightActions}>
+            <TouchableOpacity
+              onPress={() => setIsActionSheetVisible(true)}
+              style={styles.headerIconBtn}
+            >
+              <Ionicons name="ellipsis-vertical" size={20} color={Colors.white} />
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </View>
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Header with avatar */}
-        <View style={styles.headerWrap}>
-          <SafeAreaView edges={["top"]} style={styles.headerSafe}>
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={styles.backBtn}
-            >
-              <Ionicons name="arrow-back" size={22} color={Colors.white} />
-            </TouchableOpacity>
-            <View style={styles.headerCenter}>
-              <Text style={styles.headerTitle}>Member Details</Text>
-              <HindiLabel style={styles.headerHindi}>सदस्य विवरण</HindiLabel>
-            </View>
-            <View style={styles.headerRightActions}>
-              {isAdmin && (
-                <TouchableOpacity
-                  onPress={() => setIsAddChildModalVisible(true)}
-                  style={styles.headerIconBtn}
-                  disabled={isDeletingMember}
-                >
-                  <Ionicons name="person-add" size={20} color={Colors.white} />
-                </TouchableOpacity>
-              )}
-              {isAdmin && (
-                <TouchableOpacity
-                  onPress={handleDeleteMember}
-                  style={[styles.headerIconBtn, styles.headerIconBtnDanger]}
-                  disabled={isDeletingMember}
-                >
-                  {isDeletingMember ? (
-                    <ActivityIndicator size="small" color={Colors.white} />
-                  ) : (
-                    <Ionicons name="trash-outline" size={20} color={Colors.white} />
-                  )}
-                </TouchableOpacity>
-              )}
-            </View>
-          </SafeAreaView>
-        </View>
-
         {/* Profile Card */}
         <View style={styles.profileCardWrap}>
           <View style={styles.profileCard}>
             {/* Edit Details Button */}
-            {isAdmin && (
+            {/* {isAdmin && (
               <TouchableOpacity
                 onPress={() => setIsEditModalVisible(true)}
                 style={styles.editDetailsBtn}
               >
                 <Ionicons name="pencil" size={18} color={Colors.textMuted} />
               </TouchableOpacity>
-            )}
+            )} */}
 
             <View style={styles.avatarSection}>
               <View style={styles.avatarRing}>
@@ -423,12 +474,10 @@ export default function MemberDetailScreen() {
                   onPress={() => setIsFullScreen(true)}
                   activeOpacity={0.8}
                 >
-                  <Image
-                    source={{ uri: avatarUrl }}
+                  <Avatar
+                    url={localAvatar || member.profilePhoto}
+                    fallbackSeed={member.id}
                     style={styles.profileAvatar}
-                    cachePolicy="disk"
-                    transition={200}
-                    contentFit="cover"
                   />
                 </TouchableOpacity>
                 {uploading && (
@@ -448,7 +497,7 @@ export default function MemberDetailScreen() {
               )}
             </View>
 
-            <Text style={styles.profileName}>{member.name}</Text>
+            <Text style={styles.profileName}>{toTitleCase(member.name)}</Text>
             <HindiLabel style={styles.profileHindiName} weight="bold">
               {member.hindiName}
             </HindiLabel>
@@ -546,19 +595,18 @@ export default function MemberDetailScreen() {
         onRequestClose={() => setIsFullScreen(false)}
       >
         <View style={styles.fullScreenContainer}>
+          <Avatar
+            url={localAvatar || member.profilePhoto}
+            fallbackSeed={member.id}
+            style={styles.fullScreenImage}
+            contentFit="contain"
+          />
           <TouchableOpacity
             style={styles.fullScreenCloseBtn}
             onPress={() => setIsFullScreen(false)}
           >
             <Ionicons name="close" size={32} color={Colors.white} />
           </TouchableOpacity>
-          <Image
-            source={{ uri: avatarUrl }}
-            style={styles.fullScreenImage}
-            contentFit="contain"
-            cachePolicy="disk"
-            transition={200}
-          />
         </View>
       </Modal>
 
@@ -660,7 +708,7 @@ export default function MemberDetailScreen() {
             style={styles.bottomSheetContainer}
           >
             <View style={styles.bottomSheetHeader}>
-              <Text style={styles.bottomSheetTitle}>Add Child</Text>
+              <Text style={styles.bottomSheetTitle} numberOfLines={2}>Request to add a child for {toTitleCase(member.name)}</Text>
               <TouchableOpacity
                 onPress={() => setIsAddChildModalVisible(false)}
               >
@@ -674,23 +722,12 @@ export default function MemberDetailScreen() {
 
             <ScrollView contentContainerStyle={styles.bottomSheetContent}>
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Child's English Name</Text>
+                <Text style={styles.inputLabel}>Child's Name</Text>
                 <TextInput
                   style={styles.input}
                   value={newChildName}
                   onChangeText={setNewChildName}
-                  placeholder="Enter english name"
-                  placeholderTextColor={Colors.textLight}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Child's Hindi Name</Text>
-                <TextInput
-                  style={styles.input}
-                  value={newChildHindiName}
-                  onChangeText={setNewChildHindiName}
-                  placeholder="Enter hindi name"
+                  placeholder="Enter name"
                   placeholderTextColor={Colors.textLight}
                 />
               </View>
@@ -716,13 +753,194 @@ export default function MemberDetailScreen() {
                 {isAddingChild ? (
                   <ActivityIndicator color={Colors.white} />
                 ) : (
-                  <Text style={styles.saveBtnText}>Add Child</Text>
+                  <Text style={styles.saveBtnText}>Submit Request</Text>
                 )}
               </TouchableOpacity>
             </ScrollView>
           </KeyboardAvoidingView>
         </View>
       </Modal>
+
+      {/* Action Sheet Modal */}
+      <Modal
+        visible={isActionSheetVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsActionSheetVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.actionSheetOverlay}
+          activeOpacity={1}
+          onPress={() => setIsActionSheetVisible(false)}
+        >
+          <View style={styles.actionSheetContainer}>
+            <View style={styles.actionSheetIndicator} />
+            <TouchableOpacity
+              style={styles.actionSheetOption}
+              onPress={() => {
+                setIsActionSheetVisible(false);
+                setIsReportModalVisible(true);
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={styles.iconCircle}>
+                <Ionicons name="warning-outline" size={20} color={Colors.primary} />
+              </View>
+              <Text style={styles.actionSheetText}>Report Incorrect {toTitleCase(member.name)} Details</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionSheetOption}
+              onPress={() => {
+                setIsActionSheetVisible(false);
+                setIsAddChildModalVisible(true);
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={styles.iconCircle}>
+                <Ionicons name="person-add-outline" size={20} color={Colors.primary} />
+              </View>
+              <Text style={styles.actionSheetText}>Request to Add Child of {toTitleCase(member.name)}</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Report Modal */}
+      <Modal
+        visible={isReportModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsReportModalVisible(false)}
+      >
+        <View style={styles.bottomSheetOverlay}>
+          <TouchableOpacity
+            style={styles.bottomSheetBackdrop}
+            activeOpacity={1}
+            onPress={() => setIsReportModalVisible(false)}
+          />
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={styles.bottomSheetContainer}
+          >
+            <View style={styles.bottomSheetHeader}>
+              <Text style={styles.bottomSheetTitle}>Report Incorrect Details</Text>
+              <TouchableOpacity onPress={() => setIsReportModalVisible(false)}>
+                <Ionicons name="close-circle" size={28} color={Colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={styles.bottomSheetContent}>
+              <Text style={styles.reportSubtitle}>Select the details that are incorrect and provide the correct information:</Text>
+
+              {/* English Name Checkbox */}
+              <TouchableOpacity
+                style={styles.checkboxRow}
+                onPress={() => setReportEnglishName(!reportEnglishName)}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={reportEnglishName ? "checkbox" : "square-outline"}
+                  size={24}
+                  color={reportEnglishName ? Colors.primary : Colors.textMuted}
+                />
+                <Text style={styles.checkboxText}>English Name is incorrect</Text>
+              </TouchableOpacity>
+              {reportEnglishName && (
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Correct English Name</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={correctEnglishName}
+                    onChangeText={setCorrectEnglishName}
+                    placeholder="Enter correct name"
+                    placeholderTextColor={Colors.textLight}
+                  />
+                </View>
+              )}
+
+              {/* Hindi Name Checkbox */}
+              <TouchableOpacity
+                style={styles.checkboxRow}
+                onPress={() => setReportHindiName(!reportHindiName)}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={reportHindiName ? "checkbox" : "square-outline"}
+                  size={24}
+                  color={reportHindiName ? Colors.primary : Colors.textMuted}
+                />
+                <Text style={styles.checkboxText}>Hindi Name is incorrect</Text>
+              </TouchableOpacity>
+              {reportHindiName && (
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Correct Hindi Name</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={correctHindiName}
+                    onChangeText={setCorrectHindiName}
+                    placeholder="Enter correct hindi name"
+                    placeholderTextColor={Colors.textLight}
+                  />
+                </View>
+              )}
+
+              {/* DOB Checkbox */}
+              <TouchableOpacity
+                style={styles.checkboxRow}
+                onPress={() => setReportDob(!reportDob)}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={reportDob ? "checkbox" : "square-outline"}
+                  size={24}
+                  color={reportDob ? Colors.primary : Colors.textMuted}
+                />
+                <Text style={styles.checkboxText}>Date of Birth is incorrect</Text>
+              </TouchableOpacity>
+              {reportDob && (
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Correct Date of Birth</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={correctDob}
+                    onChangeText={setCorrectDob}
+                    placeholder="e.g. 15/08/1995"
+                    placeholderTextColor={Colors.textLight}
+                  />
+                </View>
+              )}
+
+              {/* Profile Photo Checkbox */}
+              <TouchableOpacity
+                style={[styles.checkboxRow, { marginBottom: 20 }]}
+                onPress={() => setReportProfilePhoto(!reportProfilePhoto)}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={reportProfilePhoto ? "checkbox" : "square-outline"}
+                  size={24}
+                  color={reportProfilePhoto ? Colors.primary : Colors.textMuted}
+                />
+                <Text style={styles.checkboxText}>Profile Photo is incorrect</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.saveBtn}
+                onPress={handleSubmitReport}
+                disabled={isSubmittingReport}
+              >
+                {isSubmittingReport ? (
+                  <ActivityIndicator color={Colors.white} />
+                ) : (
+                  <Text style={styles.saveBtnText}>Submit Report</Text>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
+
     </View>
   );
 }
@@ -931,9 +1149,10 @@ const styles = StyleSheet.create({
     color: Colors.text,
     letterSpacing: 0.3,
     textAlign: "center",
+
   },
   profileHindiName: {
-    fontSize: 16,
+    fontSize: 18,
     color: Colors.textMuted,
     marginTop: 4,
     textAlign: "center",
@@ -981,7 +1200,8 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   sectionHindiTitle: {
-    fontSize: 12,
+    fontSize: 16,
+    fontWeight: "700",
     color: Colors.textMuted,
     marginLeft: 4,
   },
@@ -1034,7 +1254,7 @@ const styles = StyleSheet.create({
   relationAvatar: {
     width: 44,
     height: 44,
-    borderRadius: 14,
+    borderRadius: 8,
     backgroundColor: Colors.surface,
     borderWidth: 2,
     borderColor: Colors.borderLight,
@@ -1044,14 +1264,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   relationName: {
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 16,
     color: Colors.text,
+    fontWeight: "700",
   },
   relationHindiName: {
-    fontSize: 12,
+    fontSize: 16,
     color: Colors.textMuted,
-    marginTop: 1,
+    fontWeight: "600",
+    marginTop: 2,
   },
   relationBadge: {
     alignItems: "center",
@@ -1168,5 +1389,75 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
-});
 
+  // Action Sheet
+  actionSheetOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  actionSheetContainer: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 12,
+    paddingBottom: 40,
+  },
+  actionSheetIndicator: {
+    width: 40,
+    height: 4,
+    backgroundColor: Colors.border,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+  actionSheetOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.white,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  iconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(232, 168, 56, 0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
+  },
+  actionSheetText: {
+    fontSize: 15,
+    color: Colors.text,
+    fontWeight: "600",
+  },
+
+  // Report form
+  reportSubtitle: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  checkboxRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  checkboxText: {
+    fontSize: 15,
+    color: Colors.text,
+    marginLeft: 10,
+  },
+});
